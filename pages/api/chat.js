@@ -1,5 +1,17 @@
 // pages/api/chat.js
 export default async function handler(req, res) {
+  // Добавляем CORS заголовки
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  // Обрабатываем preflight OPTIONS запрос
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  // Разрешаем только POST запросы
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -7,16 +19,42 @@ export default async function handler(req, res) {
   try {
     const { messages } = req.body;
 
+    // Проверяем входные данные
     if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: 'Messages are required' });
+      console.log('Ошибка: неверный формат сообщений', { messages });
+      return res.status(400).json({ error: 'Messages are required and must be an array' });
     }
 
+    if (messages.length === 0) {
+      return res.status(400).json({ error: 'At least one message is required' });
+    }
+
+    // Проверяем наличие API ключа
     if (!process.env.ANTHROPIC_API_KEY) {
+      console.log('Ошибка: API ключ не настроен');
       return res.status(500).json({ error: 'API key not configured' });
     }
 
-    // ЗДЕСЬ ВСТАВЬТЕ ВАШИ КАСТОМНЫЕ ИНСТРУКЦИИ ИЗ ПРОЕКТА
-    const customSystemPrompt = `
+    console.log('Отправляем запрос к Anthropic API...');
+    console.log('Количество сообщений:', messages.length);
+
+    // Отправляем запрос к Anthropic API
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-sonnet-20240229',
+        max_tokens: 1500,
+        messages: messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        })),
+        // ВСТАВЬТЕ СЮДА ВАШИ КАСТОМНЫЕ ИНСТРУКЦИИ ИЗ CLAUDE PROJECT
+        system: `
 Act as my Personal Strategic Consultant with the following context:
 Context:
 - You have an IQ of 180.
@@ -58,40 +96,62 @@ My Specialization:
 - Creatives with an idea: video, visuals, texts, storytelling.
 - Sales - not direct, but through atmosphere, aesthetics, a sense of depth.
 - Positioning strategies through meaning, not through aggression.
-    `.trim();
-
-    // Отправляем запрос к Anthropic API
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229', // или claude-3-opus-20240229
-        max_tokens: 1500,
-        system: customSystemPrompt, // Ваши кастомные инструкции
-        messages: messages,
-        temperature: 0.7,
+        `.trim()
       })
     });
 
+    console.log('Статус ответа Anthropic API:', response.status);
+
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Anthropic API Error:', response.status, errorData);
-      return res.status(response.status).json({ error: 'API request failed' });
+      const errorText = await response.text();
+      console.error('Ошибка Anthropic API:', response.status, errorText);
+      
+      let errorMessage = 'Ошибка API';
+      
+      if (response.status === 401) {
+        errorMessage = 'Неверный API ключ';
+      } else if (response.status === 429) {
+        errorMessage = 'Превышен лимит запросов';
+      } else if (response.status === 400) {
+        errorMessage = 'Неверный запрос к API';
+      } else if (response.status >= 500) {
+        errorMessage = 'Внутренняя ошибка сервера API';
+      }
+      
+      return res.status(response.status).json({ 
+        error: errorMessage,
+        details: errorText.substring(0, 200) // Ограничиваем детали ошибки
+      });
     }
 
     const data = await response.json();
-    
+    console.log('Успешный ответ от Anthropic API');
+
+    // Проверяем структуру ответа
+    if (!data.content || !Array.isArray(data.content) || data.content.length === 0) {
+      console.error('Неожиданная структура ответа:', data);
+      return res.status(500).json({ error: 'Unexpected response format from API' });
+    }
+
+    // Возвращаем успешный ответ
     res.status(200).json({
       content: data.content[0].text,
-      model: data.model
+      usage: data.usage || null
     });
 
   } catch (error) {
-    console.error('Server Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Внутренняя ошибка сервера:', error);
+    
+    // Проверяем тип ошибки
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      return res.status(503).json({ 
+        error: 'Не удается подключиться к API. Проверьте интернет-соединение.' 
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: 'Внутренняя ошибка сервера',
+      details: error.message.substring(0, 100)
+    });
   }
 }
