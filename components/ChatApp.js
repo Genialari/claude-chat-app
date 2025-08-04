@@ -52,7 +52,7 @@ const ChatApp = () => {
     saveChats(updatedChats);
     setCurrentChatId(newChat.id);
     setCurrentChat(newChat);
-    setSidebarOpen(false); // Закрываем сайдбар на мобильных
+    setSidebarOpen(false);
   };
 
   // Загрузка конкретного чата
@@ -79,7 +79,6 @@ const ChatApp = () => {
     let chatId = currentChatId;
     let workingChat = currentChat;
     
-    // Создаем новый чат если его нет
     if (!chatId) {
       const newChat = {
         id: generateId(),
@@ -100,11 +99,9 @@ const ChatApp = () => {
       timestamp: new Date().toISOString()
     };
 
-    // Добавляем сообщение пользователя
     const updatedMessages = [...(workingChat?.messages || []), userMessage];
     const updatedChat = { ...workingChat, messages: updatedMessages };
     
-    // Обновляем заголовок если это первое сообщение
     if (updatedChat.title === 'Новый чат') {
       updatedChat.title = message.substring(0, 30) + (message.length > 30 ? '...' : '');
     }
@@ -113,13 +110,11 @@ const ChatApp = () => {
     setMessage('');
     setIsLoading(true);
 
-    // Сбрасываем высоту textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
 
     try {
-      // Отправляем запрос к API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -146,18 +141,15 @@ const ChatApp = () => {
         timestamp: new Date().toISOString()
       };
 
-      // Добавляем ответ ассистента
       const finalMessages = [...updatedMessages, assistantMessage];
       const finalChat = { ...updatedChat, messages: finalMessages };
       
       setCurrentChat(finalChat);
 
-      // Обновляем список чатов
       const updatedChats = chats.map(chat => 
         chat.id === chatId ? finalChat : chat
       );
       
-      // Если это новый чат, добавляем его в начало списка
       if (!chats.find(chat => chat.id === chatId)) {
         updatedChats.unshift(finalChat);
       }
@@ -168,7 +160,6 @@ const ChatApp = () => {
     } catch (error) {
       console.error('Ошибка отправки сообщения:', error);
       
-      // Показываем сообщение об ошибке
       const errorMessage = {
         id: generateId(),
         role: 'assistant',
@@ -229,49 +220,100 @@ const ChatApp = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Оверлей для мобильных устройств */}
+    <div style={{
+      display: 'flex',
+      height: '100vh',
+      backgroundColor: '#f8fafc',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    }}>
+      {/* Оверлей для мобильных */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 40,
+            display: window.innerWidth < 1024 ? 'block' : 'none'
+          }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Боковая панель */}
-      <div className={`
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        fixed lg:relative lg:translate-x-0 z-50 lg:z-auto
-        w-80 h-full bg-gray-900 text-white flex flex-col
-        transition-transform duration-300 ease-in-out
-      `}>
-        <div className="p-4 border-b border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Bot size={24} className="text-blue-400" />
-              <h2 className="text-lg font-semibold">Claude Chat</h2>
+      <div style={{
+        width: '320px',
+        height: '100%',
+        backgroundColor: '#1f2937',
+        color: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.3s ease-in-out',
+        position: window.innerWidth < 1024 ? 'fixed' : 'relative',
+        zIndex: 50
+      }}>
+        <div style={{
+          padding: '16px',
+          borderBottom: '1px solid #374151'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Bot size={24} color="#60a5fa" />
+              <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0 }}>Claude Chat</h2>
             </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1 hover:bg-gray-700 rounded transition-colors"
-            >
-              <X size={20} />
-            </button>
+            {window.innerWidth < 1024 && (
+              <button
+                onClick={() => setSidebarOpen(false)}
+                style={{
+                  padding: '4px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  borderRadius: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            )}
           </div>
           <button
             onClick={createNewChat}
-            className="w-full flex items-center gap-3 p-3 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors font-medium"
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px',
+              borderRadius: '8px',
+              backgroundColor: '#2563eb',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: '500',
+              fontSize: '14px'
+            }}
           >
             <Plus size={18} />
             Новый чат
           </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto">
+        <div style={{ flex: 1, overflowY: 'auto' }}>
           {chats.length === 0 ? (
-            <div className="p-4 text-gray-400 text-center">
-              <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Пока нет чатов</p>
+            <div style={{
+              padding: '16px',
+              textAlign: 'center',
+              color: '#9ca3af'
+            }}>
+              <MessageSquare size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+              <p style={{ fontSize: '14px', margin: 0 }}>Пока нет чатов</p>
             </div>
           ) : (
             chats.map(chat => (
@@ -281,28 +323,78 @@ const ChatApp = () => {
                   loadChat(chat.id);
                   setSidebarOpen(false);
                 }}
-                className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800 transition-colors group ${
-                  currentChatId === chat.id ? 'bg-gray-800 border-l-4 border-l-blue-500' : ''
-                }`}
+                style={{
+                  padding: '16px',
+                  borderBottom: '1px solid #374151',
+                  cursor: 'pointer',
+                  backgroundColor: currentChatId === chat.id ? '#374151' : 'transparent',
+                  borderLeft: currentChatId === chat.id ? '4px solid #3b82f6' : 'none',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentChatId !== chat.id) {
+                    e.target.style.backgroundColor = '#374151';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentChatId !== chat.id) {
+                    e.target.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <MessageSquare size={14} className="text-gray-400 mt-0.5" />
-                      <h3 className="font-medium text-sm truncate">{chat.title}</h3>
+                <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <MessageSquare size={14} color="#9ca3af" />
+                      <h3 style={{
+                        fontWeight: '500',
+                        fontSize: '14px',
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {chat.title}
+                      </h3>
                     </div>
                     {chat.messages.length > 0 && (
-                      <p className="text-xs text-gray-400 truncate">
+                      <p style={{
+                        fontSize: '12px',
+                        color: '#9ca3af',
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
                         {chat.messages[chat.messages.length - 1].content.substring(0, 50)}...
                       </p>
                     )}
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p style={{
+                      fontSize: '12px',
+                      color: '#6b7280',
+                      margin: '4px 0 0 0'
+                    }}>
                       {new Date(chat.createdAt).toLocaleDateString('ru-RU')}
                     </p>
                   </div>
                   <button
                     onClick={(e) => deleteChat(chat.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700 rounded transition-all"
+                    style={{
+                      padding: '4px',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: 'white',
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                      opacity: 0
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#4b5563';
+                      e.target.style.opacity = 1;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <Trash2 size={12} />
                   </button>
@@ -314,44 +406,85 @@ const ChatApp = () => {
       </div>
 
       {/* Основная область */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Заголовок */}
-        <div className="bg-white border-b border-gray-200 p-4 flex items-center gap-4 shadow-sm">
+        <div style={{
+          backgroundColor: 'white',
+          borderBottom: '1px solid #e5e7eb',
+          padding: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+        }}>
           <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              padding: '8px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: '8px'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
           >
             <Menu size={20} />
           </button>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="hidden lg:block p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <MessageSquare size={20} />
-          </button>
-          <div className="flex items-center gap-2">
-            <Bot size={24} className="text-blue-500" />
-            <h1 className="text-xl font-semibold text-gray-800">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Bot size={24} color="#3b82f6" />
+            <h1 style={{
+              fontSize: '20px',
+              fontWeight: '600',
+              margin: 0,
+              color: '#1f2937'
+            }}>
               {currentChat?.title || 'Claude Assistant'}
             </h1>
           </div>
         </div>
 
         {/* Сообщения */}
-        <div className="flex-1 overflow-y-auto">
+        <div style={{ flex: 1, overflowY: 'auto' }}>
           {!currentChat ? (
-            <div className="flex items-center justify-center h-full p-8">
-              <div className="text-center max-w-md">
-                <Bot size={64} className="mx-auto mb-4 text-gray-300" />
-                <h2 className="text-2xl font-semibold text-gray-700 mb-2">
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              padding: '32px'
+            }}>
+              <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+                <Bot size={64} color="#d1d5db" style={{ margin: '0 auto 16px' }} />
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
                   Добро пожаловать в Claude Chat
                 </h2>
-                <p className="text-gray-500 mb-6">
+                <p style={{
+                  color: '#6b7280',
+                  marginBottom: '24px',
+                  lineHeight: '1.5'
+                }}>
                   Выберите существующий чат или создайте новый, чтобы начать общение с AI-ассистентом
                 </p>
                 <button
                   onClick={createNewChat}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
                 >
                   <Plus size={18} />
                   Создать новый чат
@@ -359,62 +492,149 @@ const ChatApp = () => {
               </div>
             </div>
           ) : (
-            <div className="p-4 space-y-6 max-w-4xl mx-auto w-full">
+            <div style={{
+              padding: '16px',
+              maxWidth: '800px',
+              margin: '0 auto',
+              width: '100%'
+            }}>
               {currentChat.messages.length === 0 && (
-                <div className="text-center py-8">
-                  <Bot size={48} className="mx-auto mb-4 text-blue-400" />
-                  <h3 className="text-lg font-medium text-gray-700 mb-2">Чат создан</h3>
-                  <p className="text-gray-500">Задайте свой первый вопрос</p>
+                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                  <Bot size={48} color="#60a5fa" style={{ margin: '0 auto 16px' }} />
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '500',
+                    color: '#374151',
+                    marginBottom: '8px'
+                  }}>
+                    Чат создан
+                  </h3>
+                  <p style={{ color: '#6b7280', margin: 0 }}>Задайте свой первый вопрос</p>
                 </div>
               )}
 
               {currentChat.messages.map(msg => (
                 <div
                   key={msg.id}
-                  className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  style={{
+                    display: 'flex',
+                    gap: '12px',
+                    marginBottom: '24px',
+                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+                  }}
                 >
                   {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <Bot size={16} className="text-blue-600" />
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      backgroundColor: '#dbeafe',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Bot size={16} color="#2563eb" />
                     </div>
                   )}
                   
-                  <div className={`max-w-2xl ${msg.role === 'user' ? 'order-first' : ''}`}>
-                    <div
-                      className={`px-4 py-3 rounded-2xl ${
-                        msg.role === 'user'
-                          ? 'bg-blue-600 text-white rounded-br-md'
-                          : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  <div style={{ maxWidth: '600px', order: msg.role === 'user' ? -1 : 0 }}>
+                    <div style={{
+                      padding: '12px 16px',
+                      borderRadius: '16px',
+                      backgroundColor: msg.role === 'user' ? '#2563eb' : 'white',
+                      color: msg.role === 'user' ? 'white' : '#1f2937',
+                      border: msg.role === 'assistant' ? '1px solid #e5e7eb' : 'none',
+                      boxShadow: msg.role === 'assistant' ? '0 1px 3px 0 rgba(0, 0, 0, 0.1)' : 'none',
+                      borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
+                      borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '16px'
+                    }}>
+                      <p style={{
+                        margin: 0,
+                        whiteSpace: 'pre-wrap',
+                        lineHeight: '1.5'
+                      }}>
+                        {msg.content}
+                      </p>
                     </div>
-                    <p className={`text-xs text-gray-400 mt-1 ${
-                      msg.role === 'user' ? 'text-right' : 'text-left'
-                    }`}>
+                    <p style={{
+                      fontSize: '12px',
+                      color: '#9ca3af',
+                      margin: '4px 0 0 0',
+                      textAlign: msg.role === 'user' ? 'right' : 'left'
+                    }}>
                       {formatTime(msg.timestamp)}
                     </p>
                   </div>
 
                   {msg.role === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                      <User size={16} className="text-gray-600" />
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      backgroundColor: '#e5e7eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <User size={16} color="#6b7280" />
                     </div>
                   )}
                 </div>
               ))}
               
               {isLoading && (
-                <div className="flex gap-3 justify-start">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <Bot size={16} className="text-blue-600" />
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  marginBottom: '24px'
+                }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: '#dbeafe',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Bot size={16} color="#2563eb" />
                   </div>
-                  <div className="max-w-2xl">
-                    <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-white border border-gray-200 shadow-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div style={{ maxWidth: '600px' }}>
+                    <div style={{
+                      padding: '12px 16px',
+                      borderRadius: '16px',
+                      borderBottomLeftRadius: '4px',
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          backgroundColor: '#9ca3af',
+                          borderRadius: '50%',
+                          animation: 'bounce 1.4s infinite ease-in-out'
+                        }} />
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          backgroundColor: '#9ca3af',
+                          borderRadius: '50%',
+                          animation: 'bounce 1.4s infinite ease-in-out',
+                          animationDelay: '0.16s'
+                        }} />
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          backgroundColor: '#9ca3af',
+                          borderRadius: '50%',
+                          animation: 'bounce 1.4s infinite ease-in-out',
+                          animationDelay: '0.32s'
+                        }} />
                       </div>
                     </div>
                   </div>
@@ -427,33 +647,81 @@ const ChatApp = () => {
         </div>
 
         {/* Поле ввода */}
-        <div className="bg-white border-t border-gray-200 p-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-end gap-3 bg-gray-50 rounded-xl border border-gray-200 p-3">
+        <div style={{
+          backgroundColor: 'white',
+          borderTop: '1px solid #e5e7eb',
+          padding: '16px'
+        }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-end',
+              gap: '12px',
+              backgroundColor: '#f9fafb',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              padding: '12px'
+            }}>
               <textarea
                 ref={textareaRef}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Введите сообщение..."
-                className="flex-1 resize-none bg-transparent focus:outline-none placeholder-gray-500 text-gray-800 min-h-[24px] max-h-[120px]"
+                style={{
+                  flex: 1,
+                  resize: 'none',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  color: '#1f2937',
+                  minHeight: '24px',
+                  maxHeight: '120px',
+                  fontFamily: 'inherit',
+                  fontSize: '14px'
+                }}
                 rows="1"
                 disabled={isLoading}
               />
               <button
                 onClick={sendMessage}
                 disabled={!message.trim() || isLoading}
-                className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                style={{
+                  padding: '8px',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: message.trim() && !isLoading ? 'pointer' : 'not-allowed',
+                  opacity: message.trim() && !isLoading ? 1 : 0.5,
+                  flexShrink: 0
+                }}
               >
                 <Send size={18} />
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-2 text-center">
+            <p style={{
+              fontSize: '12px',
+              color: '#9ca3af',
+              margin: '8px 0 0 0',
+              textAlign: 'center'
+            }}>
               Нажмите Enter для отправки, Shift+Enter для новой строки
             </p>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes bounce {
+          0%, 80%, 100% {
+            transform: scale(0);
+          }
+          40% {
+            transform: scale(1);
+          }
+        }
+      `}</style>
     </div>
   );
 };
